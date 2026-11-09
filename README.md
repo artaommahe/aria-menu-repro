@@ -7,6 +7,9 @@ from its `menu-example.css`.
 - **A. Escape inside a submenu closes the whole menu tree** instead of only the submenu.
 - **B. Enter on a menu item never activates the element itself.** `<a ngMenuItem href>` doesn't
   navigate, and `(click)` on a `<button ngMenuItem>` doesn't run. Mouse clicks work.
+- **C. `ngMenuContent` is never destroyed once the trigger has been focused.** Rows are built on the
+  trigger's `focusin` before the menu opens, and survive every close although `preserveContent` is
+  `false`. Section D is the control: `ngTabContent` is destroyed when its tab is deselected.
 
 Each section of the page lists its own steps.
 

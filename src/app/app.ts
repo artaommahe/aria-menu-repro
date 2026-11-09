@@ -1,11 +1,24 @@
-import { Component, signal, VERSION } from '@angular/core';
+import { Component, inject, signal, VERSION } from '@angular/core';
 import { MenuContent, MenuTrigger } from '@angular/aria/menu';
+import { Tab, TabContent, TabList, TabPanel, Tabs } from '@angular/aria/tabs';
 
+import { ProbeLog, RowProbe } from './row-probe';
 import { SimpleMenu, SimpleMenuItem } from './simple-menu';
 
 @Component({
   selector: 'app-root',
-  imports: [MenuTrigger, MenuContent, SimpleMenu, SimpleMenuItem],
+  imports: [
+    MenuTrigger,
+    MenuContent,
+    SimpleMenu,
+    SimpleMenuItem,
+    RowProbe,
+    Tabs,
+    TabList,
+    Tab,
+    TabPanel,
+    TabContent,
+  ],
   host: {
     '(document:focusin)': 'trackFocus()',
     '(window:hashchange)': 'log("hashchange → " + hashNow())',
@@ -66,6 +79,63 @@ import { SimpleMenu, SimpleMenuItem } from './simple-menu';
     </section>
 
     <section>
+      <h2>C. ngMenuContent is never destroyed once the trigger has been focused</h2>
+      <p>
+        <code>preserveContent</code> is left at its default (<code>false</code>), so rows should exist only while
+        the menu is open — as they do for <code>ngTabContent</code> in D below.
+      </p>
+      <ol>
+        <li>Reload. "Live rows C" reads 0.</li>
+        <li>
+          Tab to "Open menu C" without opening it. Expected: 0. Actual: 2 — focusing the trigger builds the
+          rows.
+        </li>
+        <li>Press Enter, then Escape. Expected: 0 once closed. Actual: 2, and they are never destroyed.</li>
+      </ol>
+
+      <p>Live rows C: <code id="live-c">{{ probe.live()['C'] ?? 0 }}</code></p>
+
+      <button ngMenuTrigger [menu]="menuC" class="example-menu-trigger" id="trigger-c">Open menu C</button>
+
+      <div ng-menu #menuC="ngMenu">
+        <ng-template ngMenuContent>
+          <div ng-menu-item value="Edit" rowProbe="C" probeLabel="Edit">Edit</div>
+          <div ng-menu-item value="Delete" rowProbe="C" probeLabel="Delete">Delete</div>
+        </ng-template>
+      </div>
+    </section>
+
+    <section>
+      <h2>D. Control: ngTabContent is destroyed when its tab is deselected</h2>
+      <p>Click "Two", then "One". Each panel's content is destroyed as its tab is left (live count stays 1).</p>
+
+      <p>Live panels D: <code id="live-d">{{ probe.live()['D'] ?? 0 }}</code></p>
+
+      <div ngTabs>
+        <div ngTabList selectedTab="one">
+          <button ngTab value="one" id="tab-one">One</button>
+          <button ngTab value="two" id="tab-two">Two</button>
+        </div>
+
+        <div ngTabPanel value="one">
+          <ng-template ngTabContent><p rowProbe="D" probeLabel="One">Panel one</p></ng-template>
+        </div>
+        <div ngTabPanel value="two">
+          <ng-template ngTabContent><p rowProbe="D" probeLabel="Two">Panel two</p></ng-template>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Probe log</h2>
+      <ol id="probe-log">
+        @for (line of probe.lines(); track $index) {
+          <li>{{ line }}</li>
+        }
+      </ol>
+    </section>
+
+    <section>
       <h2>Log</h2>
       <p>Focused: <code id="focused">{{ focused() }}</code> · hash: <code id="hash">{{ hash() }}</code></p>
       <button type="button" (click)="reset()">Reset log + hash</button>
@@ -92,6 +162,7 @@ import { SimpleMenu, SimpleMenuItem } from './simple-menu';
 })
 export class App {
   version = VERSION.full;
+  probe = inject(ProbeLog);
   lines = signal<string[]>([]);
   focused = signal('');
   hash = signal(location.hash);
